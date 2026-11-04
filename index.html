@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Suivi Rétatrutide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  color-scheme: light;
+  --bg:#F3F6FB; --surface:#FFFFFF; --ink:#12213A; --muted:#58698A; --line:#DAE2EE;
+  --blue:#1F5FE0; --blue-soft:#E2ECFF; --blue-ink:#123A94; --on-blue:#FFFFFF;
+  --good:#17754F; --warn:#B0511A; --field:#F8FAFD;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme: dark;
+    --bg:#0D1525; --surface:#152036; --ink:#E7EDFA; --muted:#93A3C0; --line:#26344F;
+    --blue:#6A96FF; --blue-soft:#172F5E; --blue-ink:#D2DFFF; --on-blue:#0A1430;
+    --good:#52C494; --warn:#F0955A; --field:#101A2D;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme: dark;
+  --bg:#0D1525; --surface:#152036; --ink:#E7EDFA; --muted:#93A3C0; --line:#26344F;
+  --blue:#6A96FF; --blue-soft:#172F5E; --blue-ink:#D2DFFF; --on-blue:#0A1430;
+  --good:#52C494; --warn:#F0955A; --field:#101A2D;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:'Figtree',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;font-size:16px;line-height:1.45;font-variant-numeric:tabular-nums}
+main{max-width:880px;margin:0 auto;padding:28px 18px 56px}
+h1{font-size:1.9rem;line-height:1.1;margin:0 0 4px;font-weight:700;letter-spacing:-.02em}
+h2{font-size:1.05rem;margin:0 0 12px;font-weight:600}
+.sub{color:var(--muted);margin:0 0 22px}
+button,input{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--blue);outline-offset:2px;border-radius:6px}
+
+/* stats */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--line);border-bottom:1px solid var(--line);margin-bottom:26px}
+.stat{padding:14px 12px 14px 0}
+.stat+.stat{padding-left:14px;border-left:1px solid var(--line)}
+.stat b{display:block;font-size:1.5rem;font-weight:700;letter-spacing:-.01em;line-height:1.15}
+.stat span{color:var(--muted);font-size:.85rem}
+.stat b.good{color:var(--good)} .stat b.warn{color:var(--warn)} .stat b.blue{color:var(--blue)}
+
+/* chart */
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:26px}
+#chart svg{width:100%;height:auto;display:block}
+.legend{display:flex;gap:18px;color:var(--muted);font-size:.85rem;margin-top:8px;flex-wrap:wrap}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:-1px}
+.dot.inj{background:var(--blue)} .dot.no{background:transparent;border:2px solid var(--muted)}
+.empty{color:var(--muted);padding:26px 0;text-align:center}
+
+/* form */
+form{display:grid;grid-template-columns:1fr 1fr;gap:14px 16px}
+.field{display:flex;flex-direction:column;gap:6px;min-width:0}
+.field.wide{grid-column:1/-1}
+label,.lbl{font-size:.88rem;font-weight:600;color:var(--muted)}
+input[type=text],input[type=date]{background:var(--field);border:1px solid var(--line);border-radius:10px;padding:11px 12px;width:100%;min-height:46px}
+input:focus{border-color:var(--blue)}
+.moods{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+.mood{background:var(--field);border:1px solid var(--line);border-radius:10px;padding:8px 4px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px;min-height:62px}
+.mood .e{font-size:1.5rem;line-height:1}
+.mood .t{font-size:.72rem;color:var(--muted)}
+.mood[aria-pressed=true]{border-color:var(--blue);background:var(--blue-soft)}
+.mood[aria-pressed=true] .t{color:var(--blue-ink);font-weight:600}
+.inj-box{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:12px 18px;align-items:center;border:1px solid var(--line);border-radius:12px;padding:12px 14px;background:var(--field)}
+.inj-box.on{background:var(--blue-soft);border-color:var(--blue)}
+.switch{display:flex;align-items:center;gap:10px;cursor:pointer;font-weight:600;color:var(--ink);font-size:1rem}
+.switch input{width:22px;height:22px;accent-color:var(--blue);margin:0}
+.mg{display:none;align-items:center;gap:8px}
+.inj-box.on .mg{display:flex}
+.mg input{width:96px}
+.actions{grid-column:1/-1;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:11px 18px;font-weight:600;cursor:pointer;min-height:46px}
+.btn.primary{background:var(--blue);border-color:var(--blue);color:var(--on-blue)}
+.btn.small{min-height:34px;padding:5px 10px;font-size:.85rem;font-weight:500}
+.btn.danger-armed{border-color:var(--warn);color:var(--warn);font-weight:600}
+.msg{color:var(--warn);font-size:.9rem;min-height:1.2em}
+.ok{color:var(--good)}
+
+/* table */
+.scroll{overflow-x:auto;border:1px solid var(--line);border-radius:14px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;min-width:660px}
+th{text-align:left;font-size:.85rem;color:var(--muted);font-weight:600;padding:11px 12px;border-bottom:1px solid var(--line);background:var(--surface);position:sticky;top:0}
+td{padding:11px 12px;border-bottom:1px solid var(--line);vertical-align:middle}
+tr:last-child td{border-bottom:0}
+td.num,th.num{text-align:right}
+tr.inj td{background:var(--blue-soft)}
+tr.inj td:first-child{box-shadow:inset 4px 0 0 var(--blue)}
+.badge{display:inline-block;background:var(--blue);color:var(--on-blue);font-weight:700;border-radius:999px;padding:3px 11px;white-space:nowrap}
+.d-good{color:var(--good)} .d-warn{color:var(--warn)} .d-0{color:var(--muted)}
+.note{color:var(--muted);max-width:220px;overflow-wrap:anywhere}
+tr.inj .note{color:var(--blue-ink)}
+.row-actions{display:flex;gap:6px;justify-content:flex-end}
+.foot{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px;align-items:center}
+textarea{width:100%;min-height:120px;margin-top:12px;background:var(--field);border:1px solid var(--line);border-radius:10px;padding:10px;font:inherit;font-size:.82rem;color:var(--ink)}
+.hint{color:var(--muted);font-size:.82rem;margin-top:18px}
+@media (max-width:620px){
+  main{padding:20px 14px 48px}
+  .stats{grid-template-columns:1fr 1fr}
+  .stat:nth-child(3){padding-left:0;border-left:0}
+  .stat:nth-child(n+3){border-top:1px solid var(--line)}
+  form{grid-template-columns:1fr}
+}
+@media (prefers-reduced-motion:no-preference){
+  .inj-box{transition:background .2s,border-color .2s}
+}
+</style>
+</head>
+<body>
+<main>
+  <h1>Suivi Rétatrutide</h1>
+  <p class="sub">Une pesée par jour, votre ressenti, et les jours de prise en bleu.</p>
+
+  <section class="stats" id="stats" aria-label="Résumé"></section>
+
+  <section class="panel" aria-labelledby="h-chart">
+    <h2 id="h-chart">Courbe de poids</h2>
+    <div id="chart"></div>
+    <div class="legend"><span><i class="dot inj"></i>Jour de prise</span><span><i class="dot no"></i>Pesée simple</span></div>
+  </section>
+
+  <section class="panel" aria-labelledby="h-form">
+    <h2 id="h-form">Ajouter une pesée</h2>
+    <form id="f" autocomplete="off" novalidate>
+      <div class="field"><label for="date">Date</label><input type="date" id="date" required></div>
+      <div class="field"><label for="weight">Poids (kg)</label><input type="text" id="weight" inputmode="decimal" placeholder="ex. 84,6"></div>
+      <div class="field wide">
+        <span class="lbl" id="l-mood">Ressenti</span>
+        <div class="moods" id="moods" role="group" aria-labelledby="l-mood"></div>
+      </div>
+      <div class="field wide"><label for="note">Note (effets, appétit, énergie…)</label><input type="text" id="note" maxlength="200" placeholder="Facultatif"></div>
+      <div class="inj-box" id="injbox">
+        <label class="switch"><input type="checkbox" id="inj"> Prise aujourd’hui</label>
+        <div class="mg"><label for="mg">Dose injectée</label><input type="text" id="mg" inputmode="decimal" placeholder="mg"><span>mg</span></div>
+      </div>
+      <div class="actions">
+        <button class="btn primary" type="submit" id="submit">Enregistrer</button>
+        <button class="btn" type="button" id="cancel" hidden>Annuler la modification</button>
+        <span class="msg" id="msg" role="status" aria-live="polite"></span>
+      </div>
+    </form>
+  </section>
+
+  <section aria-labelledby="h-log">
+    <h2 id="h-log">Journal</h2>
+    <div class="scroll"><table>
+      <thead><tr><th>Date</th><th class="num">Poids</th><th class="num">Écart</th><th>Ressenti</th><th>Note</th><th>Prise</th><th></th></tr></thead>
+      <tbody id="rows"></tbody>
+    </table></div>
+    <div class="foot">
+      <button class="btn small" type="button" id="csvBtn">Afficher en CSV</button>
+    </div>
+    <textarea id="csv" hidden readonly aria-label="Données au format CSV"></textarea>
+    <p class="hint">Les données sont enregistrées dans ce navigateur, sur cet appareil. Ce suivi sert uniquement à noter vos prises : les doses se décident avec votre médecin.</p>
+  </section>
+</main>
+
+<script>
+(function(){
+  var KEY='retatrutide-tracker-v1';
+  var MOODS=[['😣','Mal'],['😕','Bof'],['😐','Moyen'],['🙂','Bien'],['😄','Top']];
+  var entries=[], mood=null, editing=null, armed=null, storageOk=true;
+
+  function load(){
+    try{var r=localStorage.getItem(KEY);entries=r?JSON.parse(r):[];if(!Array.isArray(entries))entries=[];}
+    catch(e){entries=[];}
+  }
+  function save(){
+    try{localStorage.setItem(KEY,JSON.stringify(entries));}
+    catch(e){storageOk=false;say('Enregistrement local indisponible : les données seront perdues à la fermeture.',false);}
+  }
+  function $(id){return document.getElementById(id)}
+  function esc(s){return String(s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+  function pad(n){return n<10?'0'+n:''+n}
+  function todayStr(){var d=new Date();return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())}
+  function toDate(s){var p=s.split('-');return new Date(+p[0],+p[1]-1,+p[2])}
+  function fmtDate(s,long){
+    return toDate(s).toLocaleDateString('fr-FR',long?{weekday:'long',day:'numeric',month:'long'}:{weekday:'short',day:'numeric',month:'short'});
+  }
+  function kg(n){return n.toLocaleString('fr-FR',{minimumFractionDigits:1,maximumFractionDigits:1})}
+  function mgf(n){return n.toLocaleString('fr-FR',{maximumFractionDigits:2})}
+  function num(s){var v=parseFloat(String(s).replace(',','.').trim());return isFinite(v)?v:null}
+  function sortedAsc(){return entries.slice().sort(function(a,b){return a.date<b.date?-1:a.date>b.date?1:0})}
+  function say(t,ok){var m=$('msg');m.textContent=t;m.className='msg'+(ok?' ok':'')}
+
+  // moods
+  function buildMoods(){
+    var box=$('moods');box.innerHTML='';
+    MOODS.forEach(function(m,i){
+      var b=document.createElement('button');b.type='button';b.className='mood';b.setAttribute('aria-pressed','false');
+      b.setAttribute('aria-label',m[1]);b.innerHTML='<span class="e">'+m[0]+'</span><span class="t">'+m[1]+'</span>';
+      b.addEventListener('click',function(){setMood(mood===i+1?null:i+1)});
+      box.appendChild(b);
+    });
+  }
+  function setMood(v){
+    mood=v;
+    Array.prototype.forEach.call($('moods').children,function(b,i){b.setAttribute('aria-pressed',String(v===i+1))});
+  }
+
+  // injection toggle
+  function syncInj(){
+    var on=$('inj').checked;
+    $('injbox').classList.toggle('on',on);
+    if(on)$('mg').focus();
+  }
+
+  function resetForm(){
+    editing=null;
+    $('date').value=todayStr();$('weight').value='';$('note').value='';
+    $('inj').checked=false;$('mg').value='';$('injbox').classList.remove('on');
+    setMood(null);
+    $('submit').textContent='Enregistrer';$('cancel').hidden=true;$('h-form').textContent='Ajouter une pesée';
+  }
+
+  function startEdit(date){
+    var e=entries.filter(function(x){return x.date===date})[0];if(!e)return;
+    editing=date;
+    $('date').value=e.date;$('weight').value=e.weight!=null?String(e.weight).replace('.',','):'';
+    $('note').value=e.note||'';setMood(e.mood||null);
+    var inj=e.mg>0;$('inj').checked=inj;$('mg').value=inj?String(e.mg).replace('.',','):'';
+    $('injbox').classList.toggle('on',inj);
+    $('submit').textContent='Enregistrer les changements';$('cancel').hidden=false;
+    $('h-form').textContent='Modifier le '+fmtDate(date);
+    say('',true);
+    $('f').scrollIntoView({behavior:'smooth',block:'center'});
+  }
+
+  function onSubmit(ev){
+    ev.preventDefault();
+    var date=$('date').value;
+    if(!date){say('Choisissez une date.',false);return}
+    var w=num($('weight').value);
+    if(w===null||w<20||w>400){say('Entrez un poids valide en kg, par exemple 84,6.',false);return}
+    var mg=null;
+    if($('inj').checked){
+      mg=num($('mg').value);
+      if(mg===null||mg<=0||mg>100){say('Entrez la dose injectée en mg, par exemple 2.',false);return}
+    }
+    var entry={date:date,weight:Math.round(w*10)/10,mood:mood,note:$('note').value.trim(),mg:mg};
+    entries=entries.filter(function(x){return x.date!==date&&x.date!==editing});
+    entries.push(entry);
+    save();
+    var was=editing;
+    resetForm();render();
+    say(was?'Modifié.':'Enregistré.',true);
+  }
+
+  function onDelete(date,btn){
+    if(armed!==date){
+      armed=date;render();return;
+    }
+    entries=entries.filter(function(x){return x.date!==date});
+    armed=null;
+    if(editing===date)resetForm();
+    save();render();
+  }
+
+  function render(){renderStats();renderChart();renderRows();updateCsv()}
+
+  function renderStats(){
+    var a=sortedAsc(),n=a.length,h='';
+    function s(cls,val,lab){return '<div class="stat"><b class="'+cls+'">'+val+'</b><span>'+lab+'</span></div>'}
+    if(!n){
+      h=s('','–','Poids actuel')+s('','–','Évolution')+s('','0 mg','Total injecté')+s('','–','Dernière prise');
+    }else{
+      var first=a[0].weight,last=a[n-1].weight,d=Math.round((last-first)*10)/10;
+      var inj=a.filter(function(x){return x.mg>0}),tot=inj.reduce(function(t,x){return t+x.mg},0);
+      var dTxt=(d>0?'+':d<0?'−':'')+kg(Math.abs(d))+' kg';
+      var li=inj.length?inj[inj.length-1].date:null,ago='–',lab='Dernière prise';
+      if(li){
+        var days=Math.round((toDate(todayStr())-toDate(li))/86400000);
+        ago=days===0?'Aujourd’hui':days===1?'Hier':'il y a '+days+' j';
+        lab='Dernière prise ('+inj.length+' au total)';
+      }
+      h=s('',kg(last)+' kg','Poids actuel')+
+        s(d<0?'good':d>0?'warn':'',dTxt,'Depuis le '+fmtDate(a[0].date))+
+        s('blue',mgf(tot)+' mg','Total injecté')+
+        s('',ago,lab);
+    }
+    $('stats').innerHTML=h;
+  }
+
+  function renderChart(){
+    var a=sortedAsc();
+    var box=$('chart');
+    if(a.length<2){box.innerHTML='<div class="empty">Ajoutez au moins deux pesées pour voir la courbe.</div>';return}
+    var W=640,H=210,L=46,R=16,T=14,B=30;
+    var ws=a.map(function(x){return x.weight});
+    var mn=Math.min.apply(null,ws),mx=Math.max.apply(null,ws);
+    if(mx-mn<1){mn-=.5;mx+=.5}else{mn=Math.floor(mn-.3);mx=Math.ceil(mx+.3)}
+    var t0=toDate(a[0].date).getTime(),t1=toDate(a[a.length-1].date).getTime(),span=Math.max(t1-t0,1);
+    function X(d){return L+(toDate(d).getTime()-t0)/span*(W-L-R)}
+    function Y(w){return T+(1-(w-mn)/(mx-mn))*(H-T-B)}
+    var g='';
+    [0,.5,1].forEach(function(f){
+      var v=mn+(mx-mn)*f,y=Y(v);
+      g+='<line x1="'+L+'" x2="'+(W-R)+'" y1="'+y+'" y2="'+y+'" stroke="var(--line)" stroke-width="1"/>'+
+         '<text x="'+(L-8)+'" y="'+(y+4)+'" text-anchor="end" font-size="12" fill="var(--muted)">'+kg(v).replace(',0','')+'</text>';
+    });
+    var path=a.map(function(x,i){return (i?'L':'M')+X(x.date).toFixed(1)+' '+Y(x.weight).toFixed(1)}).join(' ');
+    var dots='';
+    a.forEach(function(x){
+      var inj=x.mg>0,cx=X(x.date).toFixed(1),cy=Y(x.weight).toFixed(1);
+      var tip=fmtDate(x.date)+' · '+kg(x.weight)+' kg'+(inj?' · '+mgf(x.mg)+' mg':'');
+      dots+=inj
+        ?'<circle cx="'+cx+'" cy="'+cy+'" r="6.5" fill="var(--blue)" stroke="var(--surface)" stroke-width="2"><title>'+esc(tip)+'</title></circle>'
+        :'<circle cx="'+cx+'" cy="'+cy+'" r="3.5" fill="var(--surface)" stroke="var(--muted)" stroke-width="2"><title>'+esc(tip)+'</title></circle>';
+    });
+    var lx='<text x="'+L+'" y="'+(H-8)+'" font-size="12" fill="var(--muted)">'+esc(toDate(a[0].date).toLocaleDateString('fr-FR',{day:'numeric',month:'short'}))+'</text>'+
+          '<text x="'+(W-R)+'" y="'+(H-8)+'" text-anchor="end" font-size="12" fill="var(--muted)">'+esc(toDate(a[a.length-1].date).toLocaleDateString('fr-FR',{day:'numeric',month:'short'}))+'</text>';
+    box.innerHTML='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Évolution du poids au fil des jours">'+g+
+      '<path d="'+path+'" fill="none" stroke="var(--muted)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" opacity=".7"/>'+dots+lx+'</svg>';
+  }
+
+  function renderRows(){
+    var tb=$('rows'),a=sortedAsc();
+    if(!a.length){tb.innerHTML='<tr><td colspan="7"><div class="empty">Aucune entrée. Notez votre première pesée ci-dessus.</div></td></tr>';return}
+    var prev={},last=null;
+    a.forEach(function(x){prev[x.date]=last;last=x});
+    var h='';
+    a.slice().reverse().forEach(function(x){
+      var inj=x.mg>0,p=prev[x.date],dl='–',dc='d-0';
+      if(p){
+        var d=Math.round((x.weight-p.weight)*10)/10;
+        dl=d===0?'0,0':(d>0?'+':'−')+kg(Math.abs(d));
+        dc=d<0?'d-good':d>0?'d-warn':'d-0';
+      }
+      var m=x.mood?MOODS[x.mood-1]:null;
+      var armedNow=armed===x.date;
+      h+='<tr class="'+(inj?'inj':'')+'">'+
+        '<td>'+esc(fmtDate(x.date))+'</td>'+
+        '<td class="num"><b>'+kg(x.weight)+'</b> kg</td>'+
+        '<td class="num '+dc+'">'+dl+'</td>'+
+        '<td>'+(m?'<span title="'+m[1]+'">'+m[0]+'</span> '+m[1]:'–')+'</td>'+
+        '<td class="note">'+(x.note?esc(x.note):'')+'</td>'+
+        '<td>'+(inj?'<span class="badge">'+mgf(x.mg)+' mg</span>':'')+'</td>'+
+        '<td><div class="row-actions">'+
+          '<button class="btn small" data-edit="'+x.date+'" type="button">Modifier</button>'+
+          '<button class="btn small'+(armedNow?' danger-armed':'')+'" data-del="'+x.date+'" type="button">'+(armedNow?'Confirmer':'Supprimer')+'</button>'+
+        '</div></td></tr>';
+    });
+    tb.innerHTML=h;
+  }
+
+  function updateCsv(){
+    var rows=['date;poids_kg;ressenti_1a5;note;dose_mg'];
+    sortedAsc().forEach(function(x){
+      rows.push([x.date,String(x.weight).replace('.',','),x.mood||'','"'+(x.note||'').replace(/"/g,'""')+'"',x.mg>0?String(x.mg).replace('.',','):''].join(';'));
+    });
+    $('csv').value=rows.join('\n');
+  }
+
+  // events
+  $('f').addEventListener('submit',onSubmit);
+  $('inj').addEventListener('change',syncInj);
+  $('cancel').addEventListener('click',function(){resetForm();say('',true)});
+  $('rows').addEventListener('click',function(e){
+    var t=e.target.closest('button');if(!t)return;
+    if(t.dataset.edit){armed=null;startEdit(t.dataset.edit);renderRows()}
+    else if(t.dataset.del){onDelete(t.dataset.del,t)}
+  });
+  document.addEventListener('click',function(e){
+    if(armed&&!e.target.closest('[data-del]')){armed=null;renderRows()}
+  });
+  $('csvBtn').addEventListener('click',function(){
+    var ta=$('csv');ta.hidden=!ta.hidden;
+    $('csvBtn').textContent=ta.hidden?'Afficher en CSV':'Masquer le CSV';
+    if(!ta.hidden){ta.focus();ta.select()}
+  });
+
+  load();buildMoods();resetForm();render();
+})();
+</script>
+</body>
+</html>
